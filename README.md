@@ -6,16 +6,16 @@ of [NVIDIA's real self-driving car called DAVE-2](https://developer.nvidia.com/b
 roads using a CNN. DeepPicar uses the same CNN architecture of NVIDIA's
 DAVE-2 and can drive itself in real-time locally on a Raspberry Pi.
 
-## Build instructions video
+## Build instructions video (Original DeepPiCar)
 
 https://www.youtube.com/watch?v=X1DDN9jcwjk
 
 ## Setup
 
-Install DeepPicar.
+Install DeepPicar (Modified).
 
-    $ git clone --recurse-submodules --depth 1 https://github.com/CSL-KU/DeepPicar-v3
-    $ cd DeepPicar-v3 
+    $ git clone --recurse-submodules --depth 1 https://github.com/LogEman/Logan-DeepPi-Car
+    $ cd Logan-DeepPi-Car
     $ sudo apt update
     $ sudo apt install libatlas-base-dev
     $ sudo apt install libopenblas0
@@ -43,7 +43,7 @@ Also install the python package "inputs" if you would like to to use Logitech F7
 
 To start the backend server
 
-    $ sudo nice --20 python3 deeppicar.py -n 4 -f 30
+    $ sudo nice --20 python deeppicar.py -n 4 -f 30 -g
 
 Keyboard controls  
 A: move forward   
@@ -71,7 +71,7 @@ Compress all the recorded files into a single zip file, say Dataset.zip for Cola
     
 Open the colab notebook. Following the notebook, you will upload the dataset to the colab, train the model, and download the model back to your PC. 
 
-[Open In Colab](https://colab.research.google.com/drive/1sC2sLeO5HAbc5oXotxMGp0SUncoDP4AF?usp=sharing)
+[Open In Colab](https://colab.research.google.com/drive/14yYePpWXmfmk9iFqHvRVr1YAbTDJXzHw?usp=sharing)
 
 After you are done trainig, you need to copy the trained tflite model file (`large-200x66x3.tflite` by default) to the Pi using scp commands.
 
