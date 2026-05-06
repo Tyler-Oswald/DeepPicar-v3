@@ -41,7 +41,7 @@ def _capture_loop(sock, udp_ip, udp_port):
 
 
 def init(res=(320, 240), fps=30, flip=False,
-         udp_ip=params.udp_ip, udp_port=5000):
+         udp_ip=params.dest_ip, udp_port=5000):
 
     global running, picam2, thread, need_flip
 
