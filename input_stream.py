@@ -89,6 +89,7 @@ class input_kbd(input_stream):
 
 class input_gamepad(input_stream):
     def __init__(self, speed=0.5):
+        self.CALIBRATION_FILE = 'calibration.txt'
         self.shared_arr = Array('d', [0.]*9) # joystick pos and other buttons and finish state
         #self.finish = Value('i', 1)
         self.lock=Lock()
@@ -97,18 +98,29 @@ class input_gamepad(input_stream):
         self.gamepad_process.start()
         super().__init__(speed)
 
-    CALIBRATION_FILE = 'calibration.txt'
+    
     def load_calibration(self):
         try:
             with open(self.CALIBRATION_FILE, 'r') as f:
-                return float(f.read().strip())
-        except (FileNotFoundError, ValueError):
-            return 0
+                data = f.read().strip().split(',')
 
-    def save_calibration(self, center):
+                steering_offset = float(data[0])
+
+                if len(data) > 1:
+                    throttle_offset = float(data[1])
+                else:
+                    throttle_offset = 0
+
+                return steering_offset, throttle_offset
+
+        except (FileNotFoundError, ValueError):
+            return 0, 0
+
+    def save_calibration(self, steering_offset, throttle_offset):
         with open(self.CALIBRATION_FILE, 'w') as f:
-            f.write(str(center))
- 
+            f.write(f"{steering_offset:.4f},{throttle_offset:.4f}")
+
+
 
     def inputs_process(self): #shr_gamepad_state, finish, lock):
         import inputs
@@ -123,7 +135,7 @@ class input_gamepad(input_stream):
         print('Joystick is ready')
 
         disable_joystick=False
-        offset = self.load_calibration()
+        offset, throttle_offset = self.load_calibration()
         while True: #finish.value != 0:
             gamepad_events = inputs.get_gamepad()
             if disable_joystick and time.time() - gamepad_disable_time > 0.3: # 300 ms
@@ -143,16 +155,24 @@ class input_gamepad(input_stream):
                         shr_gamepad_state[0] = angle
                 if event.ev_type == 'Absolute' and event.code == 'ABS_Y':
                     val = int(event.state)
-                    if val < 128: # calib, dead area
-                        shr_gamepad_state[8] = (128 - val) / 128
-                    else:
+
+                    center = 128
+                    deadzone = 5
+
+                    if abs(val - center) < deadzone:
                         shr_gamepad_state[8] = 0
+                    else:
+                        shr_gamepad_state[8] = max(-1.0, min(1.0, (val - center) / 128))
     
                 elif event.ev_type == 'Absolute' and event.code == 'ABS_HAT0Y':
                     if int(event.state) == -1:
-                        shr_gamepad_state[1]=1.
+                        if throttle_offset < .5:
+                            throttle_offset += .1
+                            self.save_calibration(offset, throttle_offset)
                     elif int(event.state) == 1:
-                        shr_gamepad_state[2]=1.
+                        if throttle_offset > .0:
+                            throttle_offset -= .1
+                            self.save_calibration(offset, throttle_offset)
                 elif event.ev_type == 'Absolute' and event.code == 'ABS_HAT0X':
                     if int(event.state) == -1:
                         shr_gamepad_state[0]= -1.
@@ -178,11 +198,11 @@ class input_gamepad(input_stream):
                 elif event.ev_type == 'Key' and event.code == 'BTN_TR':  # Right trigger button
                     if offset > -10:
                         offset -= 1
-                        self.save_calibration(offset)
+                        self.save_calibration(offset, throttle_offset)
                 elif event.ev_type == 'Key' and event.code == 'BTN_TL':  # Left trigger button
                     if offset < 10:
                         offset += 1
-                        self.save_calibration(offset)
+                        self.save_calibration(offset, throttle_offset)
         
             lock.release()
 
@@ -229,122 +249,122 @@ class input_gamepad(input_stream):
         self.gamepad_process.terminate()
 
 
-class input_udp_gamepad(input_stream):
-    def __init__(self, speed=0.5):
-        self.shared_arr = Array('d', [0.] * 9)
-        self.lock = Lock()
-        self.gamepad_process = Process(
-            target=self.inputs_process, args=(), daemon=True
-        )
-        self.gamepad_process.start()
-        super().__init__(speed)
+# class input_udp_gamepad(input_stream):
+#     def __init__(self, speed=0.5):
+#         self.shared_arr = Array('d', [0.] * 9)
+#         self.lock = Lock()
+#         self.gamepad_process = Process(
+#             target=self.inputs_process, args=(), daemon=True
+#         )
+#         self.gamepad_process.start()
+#         super().__init__(speed)
 
-    CALIBRATION_FILE = 'calibration.txt'
-    def load_calibration(self):
-        try:
-            with open(self.CALIBRATION_FILE, 'r') as f:
-                return float(f.read().strip())
-        except (FileNotFoundError, ValueError):
-            return 0
+#     CALIBRATION_FILE = 'calibration.txt'
+#     def load_calibration(self):
+#         try:
+#             with open(self.CALIBRATION_FILE, 'r') as f:
+#                 return float(f.read().strip())
+#         except (FileNotFoundError, ValueError):
+#             return 0
 
-    def save_calibration(self, center):
-        with open(self.CALIBRATION_FILE, 'w') as f:
-            f.write(str(center))
+#     def save_calibration(self, center):
+#         with open(self.CALIBRATION_FILE, 'w') as f:
+#             f.write(str(center))
  
-    def inputs_process(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((LISTEN_IP, LISTEN_PORT))
-        print('Joystick is ready')
+#     def inputs_process(self):
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#         sock.bind((LISTEN_IP, LISTEN_PORT))
+#         print('Joystick is ready')
  
-        shr_gamepad_state, lock = self.shared_arr, self.lock
+#         shr_gamepad_state, lock = self.shared_arr, self.lock
  
-        disable_joystick = False
-        gamepad_disable_time = 0.0
-        offset = self.load_calibration()
-        while True:
+#         disable_joystick = False
+#         gamepad_disable_time = 0.0
+#         offset = self.load_calibration()
+#         while True:
             
-            data, _ = sock.recvfrom(8)
-            if len(data) != 8:
-                continue
+#             data, _ = sock.recvfrom(8)
+#             if len(data) != 8:
+#                 continue
  
-            _, value, event_type, number = struct.unpack("<IhBB", data)
+#             _, value, event_type, number = struct.unpack("<IhBB", data)
 
-            if disable_joystick and time.time() - gamepad_disable_time > 0.3:
-                disable_joystick = False
+#             if disable_joystick and time.time() - gamepad_disable_time > 0.3:
+#                 disable_joystick = False
  
-            lock.acquire()
+#             lock.acquire()
  
-            if event_type == JS_EVENT_AXIS:
-                center = 32667/2
-                if event_type == JS_EVENT_AXIS:
-                    if number == 0:  # steering: -32767 to 32767
-                        val = value
-                        normalized = val / 32767.0
-                        if abs(normalized) < 0.05:
-                            normalized = 0.0
-                        else:
-                            normalized = max(-1.0, min(1.0, normalized))
-                        angle = round(normalized * 30, 1)
-                        shr_gamepad_state[0] = angle
+#             if event_type == JS_EVENT_AXIS:
+#                 center = 32667/2
+#                 if event_type == JS_EVENT_AXIS:
+#                     if number == 0:  # steering: -32767 to 32767
+#                         val = value
+#                         normalized = val / 32767.0
+#                         if abs(normalized) < 0.05:
+#                             normalized = 0.0
+#                         else:
+#                             normalized = max(-1.0, min(1.0, normalized))
+#                         angle = round(normalized * 30, 1)
+#                         shr_gamepad_state[0] = angle
 
-                    elif number == 2:  # throttle: 0 to 32767
-                        val = value / 32767.0
-                        if val < 0.05:
-                            shr_gamepad_state[8] = 0.0
-                        else:
-                            shr_gamepad_state[8] = val
+#                     elif number == 2:  # throttle: 0 to 32767
+#                         val = value / 32767.0
+#                         if val < 0.05:
+#                             shr_gamepad_state[8] = 0.0
+#                         else:
+#                             shr_gamepad_state[8] = val
  
  
-            elif event_type == JS_EVENT_BUTTON and value == 1:
-                if number == 34:  #record
-                    shr_gamepad_state[4] = 1.
-                elif number == 35:  #dnn
-                    shr_gamepad_state[5] = 1.
-                elif number == 24:  #quit
-                    shr_gamepad_state[6] = 1.
-                elif number == 13:  # Right trigger button
-                    if offset > -10:
-                        offset -= 1
-                        self.save_calibration(offset)
-                elif number == 12:  # Left trigger button
-                    if offset < 10:
-                        offset += 1
-                        self.save_calibration(offset)
-            lock.release()
+#             elif event_type == JS_EVENT_BUTTON and value == 1:
+#                 if number == 34:  #record
+#                     shr_gamepad_state[4] = 1.
+#                 elif number == 35:  #dnn
+#                     shr_gamepad_state[5] = 1.
+#                 elif number == 24:  #quit
+#                     shr_gamepad_state[6] = 1.
+#                 elif number == 13:  # Right trigger button
+#                     if offset > -10:
+#                         offset -= 1
+#                         self.save_calibration(offset)
+#                 elif number == 12:  # Left trigger button
+#                     if offset < 10:
+#                         offset += 1
+#                         self.save_calibration(offset)
+#             lock.release()
  
-    def read_inp(self):
-        self.buffer = ' '
-        self.lock.acquire()
-        if self.shared_arr[1] == 1.:
-            self.shared_arr[1] = 0.
-            self.buffer = 'a'
-        elif self.shared_arr[2] == 1.:
-            self.shared_arr[2] = 0.
-            self.buffer = 'z'
-        elif self.shared_arr[3] == 1.:
-            self.shared_arr[3] = 0.
-            self.buffer = 's'
-        elif self.shared_arr[4] == 1.:
-            self.shared_arr[4] = 0.
-            self.buffer = 'r'
-        elif self.shared_arr[5] == 1.:
-            self.shared_arr[5] = 0.
-            self.buffer = 'd'
-        elif self.shared_arr[6] == 1.:
-            self.shared_arr[6] = 0.
-            self.buffer = 'q'
-        elif self.shared_arr[7] == 1.:
-            self.shared_arr[7] = 0.
-            self.buffer = 't'
+#     def read_inp(self):
+#         self.buffer = ' '
+#         self.lock.acquire()
+#         if self.shared_arr[1] == 1.:
+#             self.shared_arr[1] = 0.
+#             self.buffer = 'a'
+#         elif self.shared_arr[2] == 1.:
+#             self.shared_arr[2] = 0.
+#             self.buffer = 'z'
+#         elif self.shared_arr[3] == 1.:
+#             self.shared_arr[3] = 0.
+#             self.buffer = 's'
+#         elif self.shared_arr[4] == 1.:
+#             self.shared_arr[4] = 0.
+#             self.buffer = 'r'
+#         elif self.shared_arr[5] == 1.:
+#             self.shared_arr[5] = 0.
+#             self.buffer = 'd'
+#         elif self.shared_arr[6] == 1.:
+#             self.shared_arr[6] = 0.
+#             self.buffer = 'q'
+#         elif self.shared_arr[7] == 1.:
+#             self.shared_arr[7] = 0.
+#             self.buffer = 't'
  
-        self.direction = self.shared_arr[0]
-        self.speed     = self.shared_arr[8]
-        self.lock.release()
+#         self.direction = self.shared_arr[0]
+#         self.speed     = self.shared_arr[8]
+#         self.lock.release()
  
-        return self.buffer, self.direction, self.speed
+#         return self.buffer, self.direction, self.speed
  
-    def stop(self):
-        self.gamepad_process.terminate()
+#     def stop(self):
+#         self.gamepad_process.terminate()
  
 
 class input_type:
