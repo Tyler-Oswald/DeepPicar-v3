@@ -52,6 +52,7 @@ def read_frame():
     global frame, lock
     if not use_thread:
         frame = picam2.capture_array()
+        frame = frame[frame.shape[0]//2:, :, :]
         return cv2.flip(frame, -1) if need_flip else frame
     else:
         with lock:
