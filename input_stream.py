@@ -166,12 +166,12 @@ class input_gamepad(input_stream):
     
                 elif event.ev_type == 'Absolute' and event.code == 'ABS_HAT0Y':
                     if int(event.state) == -1:
-                        if throttle_offset < .5:
-                            throttle_offset += .1
-                            self.save_calibration(offset, throttle_offset)
-                    elif int(event.state) == 1:
                         if throttle_offset > .0:
                             throttle_offset -= .1
+                            self.save_calibration(offset, throttle_offset)
+                    elif int(event.state) == 1:
+                        if throttle_offset < .5:
+                            throttle_offset += .1
                             self.save_calibration(offset, throttle_offset)
                 elif event.ev_type == 'Absolute' and event.code == 'ABS_HAT0X':
                     if int(event.state) == -1:
