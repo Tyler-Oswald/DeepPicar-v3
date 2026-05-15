@@ -234,11 +234,23 @@ if __name__ == '__main__':
 
             action_limit = 10
             angle = result * 30
-            throttle = speed * (cfg_throttle/100)
+
+            try:
+                with open("calibration.txt", "r") as f:
+                    parts = f.read().strip().split(",")
+                    throttle_off = float(parts[1]) if len(parts) > 1 else 0
+            except:
+                throttle_off = 0
+
+            throttle = speed * (cfg_throttle / 100)
+            throttle = throttle + throttle_off
+            throttle = max(-1, min(1, throttle))
+
             actuator.set_speed(throttle)
             print(f"Speed: {throttle} (CPU)")
+
             actuator.steer(angle)
-            print (f"Steering: {angle} (CPU)")
+            print(f"Steering: {angle} (CPU)")
 
 
 
