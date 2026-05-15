@@ -55,7 +55,7 @@ To start the backend server
 
     $ sudo nice --20 python deeppicar.py -n 4 -f 30 -g
 
-Gamepad controls:
+Gamepad controls:  
 Left stick: throttle  
 Right stick: Steering  
 Right bumper: Bias steering right  
