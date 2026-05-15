@@ -162,17 +162,17 @@ class input_gamepad(input_stream):
                     if abs(val - center) < deadzone:
                         shr_gamepad_state[8] = 0
                     else:
-                        shr_gamepad_state[8] = max(-1.0, min(1.0, (val - center) / 128))
+                        shr_gamepad_state[8] = max(-1.0, min(1.0, -(val - center) / 128))
     
                 elif event.ev_type == 'Absolute' and event.code == 'ABS_HAT0Y':
                     print(throttle_offset)
-                    if int(event.state) == 1:
-                        if throttle_offset > 0:
-                            throttle_offset -= .1
-                            self.save_calibration(offset, throttle_offset)
-                    elif int(event.state) == -1:
+                    if int(event.state) == -1:
                         if throttle_offset < .5:
-                            throttle_offset += .1
+                            throttle_offset = round(throttle_offset + 0.1, 1)
+                            self.save_calibration(offset, throttle_offset)
+                    elif int(event.state) == 1:
+                        if throttle_offset > 0:
+                            throttle_offset = round(throttle_offset - 0.1, 1)
                             self.save_calibration(offset, throttle_offset)
                 elif event.ev_type == 'Absolute' and event.code == 'ABS_HAT0X':
                     if int(event.state) == -1:
@@ -383,3 +383,4 @@ def instantiate_inp_stream(inp_type, def_throttle):
         inp_stream= input_udp_gamepad(def_throttle)
 
     return inp_stream
+
