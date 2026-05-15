@@ -14,7 +14,7 @@ https://www.youtube.com/watch?v=X1DDN9jcwjk
 
 Install DeepPicar.
 
-    $ git clone --recurse-submodules --depth 1  -b proportional https://github.com/CSL-KU/DeepPicar-v3.git
+    $ git clone --recurse-submodules --depth 1  -b proportional https://github.com/Tyler-Oswald/DeepPicar-v3.git
     $ cd DeepPicar-v3
     $ sudo apt update
     $ sudo apt install libatlas-base-dev
