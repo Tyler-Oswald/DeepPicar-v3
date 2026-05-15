@@ -56,15 +56,15 @@ To start the backend server
     $ sudo nice --20 python deeppicar.py -n 4 -f 30 -g
 
 Gamepad controls:
-Left stick: throttle
-Right stick: Steering
-Right bumper: Bias steering right
-Left bumper: Bias steering left
-Up D-pad: Add constant speed increase to DNN predicted throttle
-Down DPAD: Lower constant speed increase to DNN predicted throttle
-B: record
-Y: exit
-+: start DNN
+Left stick: throttle  
+Right stick: Steering  
+Right bumper: Bias steering right  
+Left bumper: Bias steering left  
+Up D-pad: Add constant speed increase to DNN predicted throttle  
+Down DPAD: Lower constant speed increase to DNN predicted throttle  
+B: record  
+Y: exit  
++: start DNN  
 
 Keyboard controls  
 A: move forward   
