@@ -383,4 +383,3 @@ def instantiate_inp_stream(inp_type, def_throttle):
         inp_stream= input_udp_gamepad(def_throttle)
 
     return inp_stream
-
